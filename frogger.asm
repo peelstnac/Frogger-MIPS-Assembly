@@ -1,12 +1,38 @@
+.data
 # Bitmap Display Configuration:
 # - Unit width in pixels: 8
 # - Unit height in pixels: 8
 # - Display width in pixels: 256
 # - Display height in pixels: 512
 # - Base Address for Display: 0x10008000 ($gp)
-
-.data
 displayAddress: .word 0x10008000
+displayWidth: .word 32
+displayHeight: .word 64
+
+# Map information
+mapWidth: .word 32
+mapHeight: .word 40
+
+map1StartY: .word 60
+map1StartHeight: .word 4
+
+map1CarsY: .word 48
+map1CarsHeight: .word 12
+
+map1MiddleY: .word 44
+map1MiddleHeight: 4
+
+map1LogsY: .word 32
+map1LogsHeight: .word 12
+
+map1EndY: .word 28
+map1EndHeight: .word 4
+
+# Player information
+playerWidth: .word 4
+playerHeight: .word 4
+playerX: .word 0
+playerY: .word 60
 
 .text
 
@@ -18,9 +44,7 @@ j MAIN
 # $t1 is colour
 # $t2 is x offset; $t3 is y offset (not multiplied)
 # $t5 is width; $t6 is height (not multiplied) 
-
 # RETURN STACK (BOT - > TOP):
-
 DRAW_RECTANGLE:
 lw $t0, displayAddress # $t0 is base address for display
 
@@ -73,15 +97,22 @@ j DRAW_RECTANGLE_LOOP_Y
 DRAW_RECTANGLE_LOOP_Y_END:
 jr $ra
 
-################################# MAIN #################################
+# STACK (BOT -> TOP): 
+# RETURN STACK (BOT - > TOP):
+DRAW_MAP1_BACKGROUND:
+addi $sp, $sp, -4
+sw $ra, 0($sp)
 
-MAIN: 
-li $t1, 0xff0000 # red
-addi $t2, $t2, 8
-addi $t3, $t3, 8
-addi $t5, $t5, 4
-addi $t6, $t6, 6
+# START
 
+# DRAW_RECTANGLE arguments
+li $t1, 0x00ff00 # green
+addi $t2, $zero, 0
+lw $t3, map1StartY
+lw $t5, mapWidth
+lw $t6, map1StartHeight
+
+# push args
 addi $sp, $sp, -4
 sw $t1, 0($sp)
 addi $sp, $sp, -4
@@ -94,6 +125,137 @@ addi $sp, $sp, -4
 sw $t6, 0($sp)
 
 jal DRAW_RECTANGLE
+
+# Cars
+
+# DRAW_RECTANGLE arguments
+li $t1, 0x808080 # grey
+addi $t2, $zero, 0
+lw $t3, map1CarsY
+lw $t5, mapWidth
+lw $t6, map1CarsHeight
+
+# push args
+addi $sp, $sp, -4
+sw $t1, 0($sp)
+addi $sp, $sp, -4
+sw $t2, 0($sp)
+addi $sp, $sp, -4
+sw $t3, 0($sp)
+addi $sp, $sp, -4
+sw $t5, 0($sp)
+addi $sp, $sp, -4
+sw $t6, 0($sp)
+
+jal DRAW_RECTANGLE
+
+# Middle
+
+# DRAW_RECTANGLE arguments
+li $t1, 0x00ff00 # green
+addi $t2, $zero, 0
+lw $t3, map1MiddleY
+lw $t5, mapWidth
+lw $t6, map1MiddleHeight
+
+# push args
+addi $sp, $sp, -4
+sw $t1, 0($sp)
+addi $sp, $sp, -4
+sw $t2, 0($sp)
+addi $sp, $sp, -4
+sw $t3, 0($sp)
+addi $sp, $sp, -4
+sw $t5, 0($sp)
+addi $sp, $sp, -4
+sw $t6, 0($sp)
+
+jal DRAW_RECTANGLE
+
+# Logs
+
+# DRAW_RECTANGLE arguments
+li $t1, 0x964b00 # brown
+addi $t2, $zero, 0
+lw $t3, map1LogsY
+lw $t5, mapWidth
+lw $t6, map1LogsHeight
+
+# push args
+addi $sp, $sp, -4
+sw $t1, 0($sp)
+addi $sp, $sp, -4
+sw $t2, 0($sp)
+addi $sp, $sp, -4
+sw $t3, 0($sp)
+addi $sp, $sp, -4
+sw $t5, 0($sp)
+addi $sp, $sp, -4
+sw $t6, 0($sp)
+
+jal DRAW_RECTANGLE
+
+# End
+
+# DRAW_RECTANGLE arguments
+li $t1, 0x00ff00 # green
+addi $t2, $zero, 0
+lw $t3, map1EndY
+lw $t5, mapWidth
+lw $t6, map1EndHeight
+
+# push args
+addi $sp, $sp, -4
+sw $t1, 0($sp)
+addi $sp, $sp, -4
+sw $t2, 0($sp)
+addi $sp, $sp, -4
+sw $t3, 0($sp)
+addi $sp, $sp, -4
+sw $t5, 0($sp)
+addi $sp, $sp, -4
+sw $t6, 0($sp)
+
+jal DRAW_RECTANGLE
+
+lw $ra 0($sp)
+addi $sp, $sp, 4
+jr $ra
+
+DRAW_PLAYER:
+addi $sp, $sp, -4
+sw $ra, 0($sp)
+
+# DRAW_RECTANGLE arguments
+li $t1, 0xffa500 # orange
+lw $t2, playerX
+lw $t3, playerY
+lw $t5, playerWidth
+lw $t6, playerHeight
+
+# push args
+addi $sp, $sp, -4
+sw $t1, 0($sp)
+addi $sp, $sp, -4
+sw $t2, 0($sp)
+addi $sp, $sp, -4
+sw $t3, 0($sp)
+addi $sp, $sp, -4
+sw $t5, 0($sp)
+addi $sp, $sp, -4
+sw $t6, 0($sp)
+
+jal DRAW_RECTANGLE
+
+lw $ra 0($sp)
+addi $sp, $sp, 4
+jr $ra
+
+################################# MAIN #################################
+
+MAIN: 
+jal DRAW_MAP1_BACKGROUND
+jal DRAW_PLAYER
 
 Exit:
 li $v0, 10 # terminate the program gracefully
