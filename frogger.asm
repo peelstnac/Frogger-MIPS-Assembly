@@ -4,50 +4,96 @@
 # - Display width in pixels: 256
 # - Display height in pixels: 512
 # - Base Address for Display: 0x10008000 ($gp)
-#
+
 .data
 displayAddress: .word 0x10008000
+
 .text
-Draw:
-lw $t0, displayAddress # $t0 stores the base address for display
-li $t1, 0xff0000 # $t1 stores the red colour code
 
-addi $t2, $zero, 28 # $t2 stores x offset
-addi $t3, $zero, 60 # $t3 stores y offset
-addi $t5, $zero, 4 # $t5 stores width of rectangle
-addi $t6, $zero, 4 # $t6 stores height of rectangle
-add $t7, $t5, $zero # $t7 is original $t5
+j MAIN
 
-addi $t4, $zero, 4 # $t4 stores 4
+################################# FUNCTIONS #################################
+
+# STACK (BOT -> TOP): t1 $t2 $t3 $t5 $t6
+# $t1 is colour
+# $t2 is x offset; $t3 is y offset (not multiplied)
+# $t5 is width; $t6 is height (not multiplied) 
+
+# RETURN STACK (BOT - > TOP):
+
+DRAW_RECTANGLE:
+lw $t0, displayAddress # $t0 is base address for display
+
+# pop arguments off stack
+lw $t6, 0($sp)
+addi $sp, $sp, 4
+lw $t5, 0($sp)
+addi $sp, $sp, 4
+lw $t3, 0($sp)
+addi $sp, $sp, 4
+lw $t2, 0($sp)
+addi $sp, $sp, 4
+lw $t1, 0($sp)
+addi $sp, $sp, 4
+
+# body
+add $t7, $t5, $zero # $t7 is copy of $t5
+
+addi $t4, $zero, 4
 mult $t2, $t4
-mflo $t2 # $t2 is now multiplied by 4
+mflo $t2 # $t2 = $t2 * 4
 
-addi $t4, $zero, 128 # $t4 stores 128
+addi $t4, $zero, 128
 mult $t3, $t4
-mflo $t3 # $t3 is now multiplied by 128
+mflo $t3 # $t3 = $t3 * 128
 
-Loop_y:
-beq $t6, $zero, Loop_y_end
-Loop_x:
-beq $t5, $zero, Loop_x_end
-add $t4, $t2, $t3 # $t4 stores total offset to add
-add $t4, $t4, $t0 # $t4 is now the position to draw pixel
-sw $t1, 0($t4) # paint the first (top-left) unit red.
+DRAW_RECTANGLE_LOOP_Y:
+beq $t6, $zero, DRAW_RECTANGLE_LOOP_Y_END
 
-addi $t2, $t2, 4 # increment $t2 by 4 to move down a column
+DRAW_RECTANGLE_LOOP_X:
+beq $t5, $zero, DRAW_RECTANGLE_LOOP_X_END
+add $t4, $t2, $t3 # $t4 is total offset to add
+add $t4, $t4, $t0 # $t4 is position to draw pixel
+sw $t1, 0($t4) # paint pixel
+addi $t2, $t2, 4 # move down a column
 addi $t5, $t5, -1 # loop counter decrement
-j Loop_x
-Loop_x_end:
+j DRAW_RECTANGLE_LOOP_X
+
+DRAW_RECTANGLE_LOOP_X_END:
 add $t5, $t7, $zero # reset $t5 to width
 addi $t4, $zero, -4
 mult $t4, $t5 
 mflo $t4
-add $t2, $t2, $t4 # resrt $t4 to original x offset
+add $t2, $t2, $t4 # reset $t4 to original x offset
 
-addi $t3, $t3, 128 # increment $t3 by 128 to move down a row
+addi $t3, $t3, 128 # move down a row
 addi $t6, $t6, -1 # loop counter decrement
-j Loop_y
-Loop_y_end:
+j DRAW_RECTANGLE_LOOP_Y
+
+DRAW_RECTANGLE_LOOP_Y_END:
+jr $ra
+
+################################# MAIN #################################
+
+MAIN: 
+li $t1, 0xff0000 # red
+addi $t2, $t2, 8
+addi $t3, $t3, 8
+addi $t5, $t5, 4
+addi $t6, $t6, 6
+
+addi $sp, $sp, -4
+sw $t1, 0($sp)
+addi $sp, $sp, -4
+sw $t2, 0($sp)
+addi $sp, $sp, -4
+sw $t3, 0($sp)
+addi $sp, $sp, -4
+sw $t5, 0($sp)
+addi $sp, $sp, -4
+sw $t6, 0($sp)
+
+jal DRAW_RECTANGLE
 
 Exit:
 li $v0, 10 # terminate the program gracefully
