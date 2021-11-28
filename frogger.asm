@@ -49,7 +49,7 @@ j MAIN
 # $t1 is array pointer
 # RETURN STACK (BOT -> TOP):
 SHIFT_ROW_ARRAY_L:
-# shift array of mapWidth integers by 1 to the right with wrap around
+# shift array of mapWidth integers by 1 to the left with wrap around
 # pop arguments off stack
 lw $t1, 0($sp)
 addi $sp, $sp, 4
@@ -69,9 +69,37 @@ addi $t8, $t8, 4 # $t8 += 4
 j SHIFT_ROW_ARRAY_L_LOOP
 
 SHIFT_ROW_ARRAY_L_LOOP_END:
-# idea: arr[127] = arr[0]
+# idea: arr[31] = arr[0]
 add $t3, $t1, $t8
 sw $t2, 0($t3)
+jr $ra
+
+# STACK (BOT -> TOP): $t1
+# $t1 is array pointer
+# RETURN STACK (BOT -> TOP):
+SHIFT_ROW_ARRAY_R:
+# shift array of mapWidth integers by 1 to the right with wrap around
+# pop arguments off stack
+lw $t1, 0($sp)
+addi $sp, $sp, 4
+
+lw $t2, 124($t1) # (*$t1)[31]
+addi $t8, $zero, 124 # index
+addi $t9, $zero, -4 # for loop index limit
+
+SHIFT_ROW_ARRAY_R_LOOP:
+beq $t8, $t9, SHIFT_ROW_ARRAY_R_LOOP_END
+# idea: arr[i] = arr[i - 1]
+add $t3, $t1, $t8 # $t3 index i
+addi $t4, $t3, -4 # $t4 index i - 1
+lw $t4, 0($t4)
+sw $t4, 0($t3)
+addi $t8, $t8, -4 # $t8 += 4
+j SHIFT_ROW_ARRAY_R_LOOP
+
+SHIFT_ROW_ARRAY_R_LOOP_END:
+# idea: arr[0] = arr[31]
+sw $t2, 0($t1)
 jr $ra
 
 # STACK (BOT -> TOP): $t1 $t2 $t3 $t5 $t6
@@ -502,7 +530,7 @@ MAIN:
 la $t1, carRow1
 addi $sp, $sp, -4
 sw $t1, 0($sp)
-jal SHIFT_ROW_ARRAY_L
+jal SHIFT_ROW_ARRAY_R
 jal DRAW_MAP1_BACKGROUND
 jal DRAW_PLAYER
 jal DRAW_CARS
