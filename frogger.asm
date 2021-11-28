@@ -556,6 +556,66 @@ lw $ra 0($sp)
 addi $sp, $sp, 4
 jr $ra
 
+# STACK (BOT -> TOP): 
+# RETURN STACK (BOT - > TOP):
+LISTEN_TO_KEYBOARD:
+# check if key has been pressed
+lw $t8, 0xffff0000
+beq $t8, 1, KEY_IN
+j NO_KEY_IN
+
+KEY_IN:
+# if keystroke
+lw $t2, 0xffff0004
+# w
+beq $t2, 119, KEY_W
+# a
+beq $t2, 97, KEY_A
+# s
+beq $t2, 115, KEY_S
+# d
+beq $t2, 100, KEY_D
+j NO_KEY_IN
+
+KEY_W:
+lw $t3, playerY
+lw $t4, map1EndY
+beq $t3, $t4, NO_KEY_IN # collision detection
+addi $t3, $t3, -1 # update position
+sw $t3, playerY
+j NO_KEY_IN
+
+KEY_A:
+lw $t3, playerX
+beq $t3, $zero, NO_KEY_IN # collision detection
+addi $t3, $t3, -1 # update position
+sw $t3, playerX
+j NO_KEY_IN
+
+KEY_S:
+lw $t3, playerY
+lw $t4, displayHeight
+lw $t5, playerHeight
+sub $t4, $t4, $t5
+beq $t3, $t4, NO_KEY_IN # collision detection
+addi $t3, $t3, 1 # update position
+sw $t3, playerY
+j NO_KEY_IN
+
+KEY_D:
+lw $t3, playerX
+lw $t4, mapWidth
+lw $t5, playerWidth
+sub $t4, $t4, $t5
+beq $t3, $t4, NO_KEY_IN # collision detection
+addi $t3, $t3, 1 # update position
+sw $t3, playerX
+j NO_KEY_IN
+
+
+NO_KEY_IN:
+jr $ra
+
 ################################# MAIN #################################
 
 MAIN: 
@@ -564,10 +624,13 @@ GAME_LOOP:
 
 # drawing
 jal DRAW_MAP1_BACKGROUND
-jal DRAW_PLAYER
 jal DRAW_CARS
+jal DRAW_PLAYER
 
-# movement
+# player
+jal LISTEN_TO_KEYBOARD
+
+# obstacles
 jal MOVE_CARS
 
 # update time
