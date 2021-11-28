@@ -28,6 +28,11 @@ map1LogsHeight: .word 12
 map1EndY: .word 28
 map1EndHeight: .word 4
 
+# Map obstacles
+carRow1: .word 0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000
+carRow2: .word 0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080
+carRow3: .word 0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000
+
 # Player information
 playerWidth: .word 4
 playerHeight: .word 4
@@ -40,7 +45,36 @@ j MAIN
 
 ################################# FUNCTIONS #################################
 
-# STACK (BOT -> TOP): t1 $t2 $t3 $t5 $t6
+# STACK (BOT -> TOP): $t1
+# $t1 is array pointer
+# RETURN STACK (BOT -> TOP):
+SHIFT_ROW_ARRAY_L:
+# shift array of mapWidth integers by 1 to the right with wrap around
+# pop arguments off stack
+lw $t1, 0($sp)
+addi $sp, $sp, 4
+
+lw $t2, 0($t1) # (*$t1)[0]
+addi $t8, $zero, 0 # index
+addi $t9, $zero, 124 # for loop index limit
+
+SHIFT_ROW_ARRAY_L_LOOP:
+beq $t8, $t9, SHIFT_ROW_ARRAY_L_LOOP_END
+# idea: arr[i] = arr[i + 1]
+add $t3, $t1, $t8 # $t3 index i
+addi $t4, $t3, 4 # $t4 index i + 1
+lw $t4, 0($t4)
+sw $t4, 0($t3)
+addi $t8, $t8, 4 # $t8 += 4
+j SHIFT_ROW_ARRAY_L_LOOP
+
+SHIFT_ROW_ARRAY_L_LOOP_END:
+# idea: arr[127] = arr[0]
+add $t3, $t1, $t8
+sw $t2, 0($t3)
+jr $ra
+
+# STACK (BOT -> TOP): $t1 $t2 $t3 $t5 $t6
 # $t1 is colour
 # $t2 is x offset; $t3 is y offset (not multiplied)
 # $t5 is width; $t6 is height (not multiplied) 
@@ -95,6 +129,177 @@ addi $t6, $t6, -1 # loop counter decrement
 j DRAW_RECTANGLE_LOOP_Y
 
 DRAW_RECTANGLE_LOOP_Y_END:
+jr $ra
+
+# STACK (BOT -> TOP): $t2 $t3
+# $t2 is x offset; $t3 is y offset (not multiplied)
+# RETURN STACK (BOT - > TOP):
+DRAW_CAR_ROW_1:
+lw $t0, displayAddress # $t0 is base address for display
+
+# pop arguments off stack
+lw $t3, 0($sp)
+addi $sp, $sp, 4
+lw $t2, 0($sp)
+addi $sp, $sp, 4
+
+lw $t5, mapWidth # width
+addi $t6, $zero, 4 # height
+
+# body
+add $t7, $t5, $zero # $t7 is copy of $t5
+
+addi $t4, $zero, 4
+mult $t2, $t4
+mflo $t2 # $t2 = $t2 * 4
+
+addi $t4, $zero, 128
+mult $t3, $t4
+mflo $t3 # $t3 = $t3 * 128
+
+DRAW_CAR_ROW_1_LOOP_Y:
+beq $t6, $zero, DRAW_CAR_ROW_1_LOOP_Y_END
+
+DRAW_CAR_ROW_1_LOOP_X:
+beq $t5, $zero, DRAW_CAR_ROW_1_LOOP_X_END
+add $t4, $t2, $t3 # $t4 is total offset to add
+add $t4, $t4, $t0 # $t4 is position to draw pixel
+
+la $t8, carRow1
+add $t8, $t8, $t2
+lw $t1, 0($t8) # load $t1 as color in array
+
+sw $t1, 0($t4) # paint pixel
+addi $t2, $t2, 4 # move down a column
+addi $t5, $t5, -1 # loop counter decrement
+j DRAW_CAR_ROW_1_LOOP_X
+
+DRAW_CAR_ROW_1_LOOP_X_END:
+add $t5, $t7, $zero # reset $t5 to width
+addi $t4, $zero, -4
+mult $t4, $t5 
+mflo $t4
+add $t2, $t2, $t4 # reset $t4 to original x offset
+
+addi $t3, $t3, 128 # move down a row
+addi $t6, $t6, -1 # loop counter decrement
+j DRAW_CAR_ROW_1_LOOP_Y
+
+DRAW_CAR_ROW_1_LOOP_Y_END:
+jr $ra
+
+# STACK (BOT -> TOP): $t2 $t3
+# $t2 is x offset; $t3 is y offset (not multiplied)
+# RETURN STACK (BOT - > TOP):
+DRAW_CAR_ROW_2:
+lw $t0, displayAddress # $t0 is base address for display
+
+# pop arguments off stack
+lw $t3, 0($sp)
+addi $sp, $sp, 4
+lw $t2, 0($sp)
+addi $sp, $sp, 4
+
+lw $t5, mapWidth # width
+addi $t6, $zero, 4 # height
+
+# body
+add $t7, $t5, $zero # $t7 is copy of $t5
+
+addi $t4, $zero, 4
+mult $t2, $t4
+mflo $t2 # $t2 = $t2 * 4
+
+addi $t4, $zero, 128
+mult $t3, $t4
+mflo $t3 # $t3 = $t3 * 128
+
+DRAW_CAR_ROW_2_LOOP_Y:
+beq $t6, $zero, DRAW_CAR_ROW_2_LOOP_Y_END
+
+DRAW_CAR_ROW_2_LOOP_X:
+beq $t5, $zero, DRAW_CAR_ROW_2_LOOP_X_END
+add $t4, $t2, $t3 # $t4 is total offset to add
+add $t4, $t4, $t0 # $t4 is position to draw pixel
+
+la $t8, carRow2
+add $t8, $t8, $t2
+lw $t1, 0($t8) # load $t1 as color in array
+
+sw $t1, 0($t4) # paint pixel
+addi $t2, $t2, 4 # move down a column
+addi $t5, $t5, -1 # loop counter decrement
+j DRAW_CAR_ROW_2_LOOP_X
+
+DRAW_CAR_ROW_2_LOOP_X_END:
+add $t5, $t7, $zero # reset $t5 to width
+addi $t4, $zero, -4
+mult $t4, $t5 
+mflo $t4
+add $t2, $t2, $t4 # reset $t4 to original x offset
+
+addi $t3, $t3, 128 # move down a row
+addi $t6, $t6, -1 # loop counter decrement
+j DRAW_CAR_ROW_2_LOOP_Y
+
+DRAW_CAR_ROW_2_LOOP_Y_END:
+jr $ra
+
+# STACK (BOT -> TOP): $t2 $t3
+# $t2 is x offset; $t3 is y offset (not multiplied)
+# RETURN STACK (BOT - > TOP):
+DRAW_CAR_ROW_3:
+lw $t0, displayAddress # $t0 is base address for display
+
+# pop arguments off stack
+lw $t3, 0($sp)
+addi $sp, $sp, 4
+lw $t2, 0($sp)
+addi $sp, $sp, 4
+
+lw $t5, mapWidth # width
+addi $t6, $zero, 4 # height
+
+# body
+add $t7, $t5, $zero # $t7 is copy of $t5
+
+addi $t4, $zero, 4
+mult $t2, $t4
+mflo $t2 # $t2 = $t2 * 4
+
+addi $t4, $zero, 128
+mult $t3, $t4
+mflo $t3 # $t3 = $t3 * 128
+
+DRAW_CAR_ROW_3_LOOP_Y:
+beq $t6, $zero, DRAW_CAR_ROW_3_LOOP_Y_END
+
+DRAW_CAR_ROW_3_LOOP_X:
+beq $t5, $zero, DRAW_CAR_ROW_3_LOOP_X_END
+add $t4, $t2, $t3 # $t4 is total offset to add
+add $t4, $t4, $t0 # $t4 is position to draw pixel
+
+la $t8, carRow3
+add $t8, $t8, $t2
+lw $t1, 0($t8) # load $t1 as color in array
+
+sw $t1, 0($t4) # paint pixel
+addi $t2, $t2, 4 # move down a column
+addi $t5, $t5, -1 # loop counter decrement
+j DRAW_CAR_ROW_3_LOOP_X
+
+DRAW_CAR_ROW_3_LOOP_X_END:
+add $t5, $t7, $zero # reset $t5 to width
+addi $t4, $zero, -4
+mult $t4, $t5 
+mflo $t4
+add $t2, $t2, $t4 # reset $t4 to original x offset
+
+addi $t3, $t3, 128 # move down a row
+addi $t6, $t6, -1 # loop counter decrement
+j DRAW_CAR_ROW_3_LOOP_Y
+
+DRAW_CAR_ROW_3_LOOP_Y_END:
 jr $ra
 
 # STACK (BOT -> TOP): 
@@ -251,11 +456,56 @@ lw $ra 0($sp)
 addi $sp, $sp, 4
 jr $ra
 
+# STACK (BOT -> TOP): 
+# RETURN STACK (BOT - > TOP):
+DRAW_CARS:
+addi $sp, $sp, -4
+sw $ra, 0($sp)
+
+# Row 1
+# args for DRAW_CAR_ROW_...
+addi $t2, $zero, 0
+addi $t3, $zero, 56
+addi $sp, $sp, -4
+sw $t2, 0($sp)
+addi $sp, $sp, -4
+sw $t3, 0($sp)
+jal DRAW_CAR_ROW_1
+
+# Row 2
+# args for DRAW_CAR_ROW_...
+addi $t2, $zero, 0
+addi $t3, $zero, 52
+addi $sp, $sp, -4
+sw $t2, 0($sp)
+addi $sp, $sp, -4
+sw $t3, 0($sp)
+jal DRAW_CAR_ROW_2
+
+# Row 1
+# args for DRAW_CAR_ROW_...
+addi $t2, $zero, 0
+addi $t3, $zero, 48
+addi $sp, $sp, -4
+sw $t2, 0($sp)
+addi $sp, $sp, -4
+sw $t3, 0($sp)
+jal DRAW_CAR_ROW_3
+
+lw $ra 0($sp)
+addi $sp, $sp, 4
+jr $ra
+
 ################################# MAIN #################################
 
 MAIN: 
+la $t1, carRow1
+addi $sp, $sp, -4
+sw $t1, 0($sp)
+jal SHIFT_ROW_ARRAY_L
 jal DRAW_MAP1_BACKGROUND
 jal DRAW_PLAYER
+jal DRAW_CARS
 
 Exit:
 li $v0, 10 # terminate the program gracefully
