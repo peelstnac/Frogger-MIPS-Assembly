@@ -35,7 +35,12 @@ carRow3: .word 0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x
 carRow1Rate: .word 1
 carRow2Rate: .word 2
 carRow3Rate: .word 1
-
+logRow1: .word 0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff
+logRow2: .word 0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00
+logRow3: .word 0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff
+logRow1Rate: .word 1
+logRow2Rate: .word 2
+logRow3Rate: .word 1
 # Player information
 playerWidth: .word 4
 playerHeight: .word 4
@@ -163,6 +168,177 @@ addi $t6, $t6, -1 # loop counter decrement
 j DRAW_RECTANGLE_LOOP_Y
 
 DRAW_RECTANGLE_LOOP_Y_END:
+jr $ra
+
+# STACK (BOT -> TOP): $t2 $t3
+# $t2 is x offset; $t3 is y offset (not multiplied)
+# RETURN STACK (BOT - > TOP):
+DRAW_LOG_ROW_1:
+lw $t0, displayAddress # $t0 is base address for display
+
+# pop arguments off stack
+lw $t3, 0($sp)
+addi $sp, $sp, 4
+lw $t2, 0($sp)
+addi $sp, $sp, 4
+
+lw $t5, mapWidth # width
+addi $t6, $zero, 4 # height
+
+# body
+add $t7, $t5, $zero # $t7 is copy of $t5
+
+addi $t4, $zero, 4
+mult $t2, $t4
+mflo $t2 # $t2 = $t2 * 4
+
+addi $t4, $zero, 128
+mult $t3, $t4
+mflo $t3 # $t3 = $t3 * 128
+
+DRAW_LOG_ROW_1_LOOP_Y:
+beq $t6, $zero, DRAW_LOG_ROW_1_LOOP_Y_END
+
+DRAW_LOG_ROW_1_LOOP_X:
+beq $t5, $zero, DRAW_LOG_ROW_1_LOOP_X_END
+add $t4, $t2, $t3 # $t4 is total offset to add
+add $t4, $t4, $t0 # $t4 is position to draw pixel
+
+la $t8, logRow1
+add $t8, $t8, $t2
+lw $t1, 0($t8) # load $t1 as color in array
+
+sw $t1, 0($t4) # paint pixel
+addi $t2, $t2, 4 # move down a column
+addi $t5, $t5, -1 # loop counter decrement
+j DRAW_LOG_ROW_1_LOOP_X
+
+DRAW_LOG_ROW_1_LOOP_X_END:
+add $t5, $t7, $zero # reset $t5 to width
+addi $t4, $zero, -4
+mult $t4, $t5 
+mflo $t4
+add $t2, $t2, $t4 # reset $t4 to original x offset
+
+addi $t3, $t3, 128 # move down a row
+addi $t6, $t6, -1 # loop counter decrement
+j DRAW_LOG_ROW_1_LOOP_Y
+
+DRAW_LOG_ROW_1_LOOP_Y_END:
+jr $ra
+
+# STACK (BOT -> TOP): $t2 $t3
+# $t2 is x offset; $t3 is y offset (not multiplied)
+# RETURN STACK (BOT - > TOP):
+DRAW_LOG_ROW_2:
+lw $t0, displayAddress # $t0 is base address for display
+
+# pop arguments off stack
+lw $t3, 0($sp)
+addi $sp, $sp, 4
+lw $t2, 0($sp)
+addi $sp, $sp, 4
+
+lw $t5, mapWidth # width
+addi $t6, $zero, 4 # height
+
+# body
+add $t7, $t5, $zero # $t7 is copy of $t5
+
+addi $t4, $zero, 4
+mult $t2, $t4
+mflo $t2 # $t2 = $t2 * 4
+
+addi $t4, $zero, 128
+mult $t3, $t4
+mflo $t3 # $t3 = $t3 * 128
+
+DRAW_LOG_ROW_2_LOOP_Y:
+beq $t6, $zero, DRAW_LOG_ROW_2_LOOP_Y_END
+
+DRAW_LOG_ROW_2_LOOP_X:
+beq $t5, $zero, DRAW_LOG_ROW_2_LOOP_X_END
+add $t4, $t2, $t3 # $t4 is total offset to add
+add $t4, $t4, $t0 # $t4 is position to draw pixel
+
+la $t8, logRow2
+add $t8, $t8, $t2
+lw $t1, 0($t8) # load $t1 as color in array
+
+sw $t1, 0($t4) # paint pixel
+addi $t2, $t2, 4 # move down a column
+addi $t5, $t5, -1 # loop counter decrement
+j DRAW_LOG_ROW_2_LOOP_X
+
+DRAW_LOG_ROW_2_LOOP_X_END:
+add $t5, $t7, $zero # reset $t5 to width
+addi $t4, $zero, -4
+mult $t4, $t5 
+mflo $t4
+add $t2, $t2, $t4 # reset $t4 to original x offset
+
+addi $t3, $t3, 128 # move down a row
+addi $t6, $t6, -1 # loop counter decrement
+j DRAW_LOG_ROW_2_LOOP_Y
+
+DRAW_LOG_ROW_2_LOOP_Y_END:
+jr $ra
+
+# STACK (BOT -> TOP): $t2 $t3
+# $t2 is x offset; $t3 is y offset (not multiplied)
+# RETURN STACK (BOT - > TOP):
+DRAW_LOG_ROW_3:
+lw $t0, displayAddress # $t0 is base address for display
+
+# pop arguments off stack
+lw $t3, 0($sp)
+addi $sp, $sp, 4
+lw $t2, 0($sp)
+addi $sp, $sp, 4
+
+lw $t5, mapWidth # width
+addi $t6, $zero, 4 # height
+
+# body
+add $t7, $t5, $zero # $t7 is copy of $t5
+
+addi $t4, $zero, 4
+mult $t2, $t4
+mflo $t2 # $t2 = $t2 * 4
+
+addi $t4, $zero, 128
+mult $t3, $t4
+mflo $t3 # $t3 = $t3 * 128
+
+DRAW_LOG_ROW_3_LOOP_Y:
+beq $t6, $zero, DRAW_LOG_ROW_3_LOOP_Y_END
+
+DRAW_LOG_ROW_3_LOOP_X:
+beq $t5, $zero, DRAW_LOG_ROW_3_LOOP_X_END
+add $t4, $t2, $t3 # $t4 is total offset to add
+add $t4, $t4, $t0 # $t4 is position to draw pixel
+
+la $t8, logRow3
+add $t8, $t8, $t2
+lw $t1, 0($t8) # load $t1 as color in array
+
+sw $t1, 0($t4) # paint pixel
+addi $t2, $t2, 4 # move down a column
+addi $t5, $t5, -1 # loop counter decrement
+j DRAW_LOG_ROW_3_LOOP_X
+
+DRAW_LOG_ROW_3_LOOP_X_END:
+add $t5, $t7, $zero # reset $t5 to width
+addi $t4, $zero, -4
+mult $t4, $t5 
+mflo $t4
+add $t2, $t2, $t4 # reset $t4 to original x offset
+
+addi $t3, $t3, 128 # move down a row
+addi $t6, $t6, -1 # loop counter decrement
+j DRAW_LOG_ROW_3_LOOP_Y
+
+DRAW_LOG_ROW_3_LOOP_Y_END:
 jr $ra
 
 # STACK (BOT -> TOP): $t2 $t3
@@ -530,6 +706,46 @@ lw $ra 0($sp)
 addi $sp, $sp, 4
 jr $ra
 
+# STACK (BOT -> TOP): 
+# RETURN STACK (BOT - > TOP):
+DRAW_LOGS:
+addi $sp, $sp, -4
+sw $ra, 0($sp)
+
+# Row 1
+# args for DRAW_LOG_ROW_...
+addi $t2, $zero, 0
+addi $t3, $zero, 40
+addi $sp, $sp, -4
+sw $t2, 0($sp)
+addi $sp, $sp, -4
+sw $t3, 0($sp)
+jal DRAW_LOG_ROW_1
+
+# Row 2
+# args for DRAW_LOG_ROW_...
+addi $t2, $zero, 0
+addi $t3, $zero, 36
+addi $sp, $sp, -4
+sw $t2, 0($sp)
+addi $sp, $sp, -4
+sw $t3, 0($sp)
+jal DRAW_LOG_ROW_2
+
+# Row 1
+# args for DRAW_LOG_ROW_...
+addi $t2, $zero, 0
+addi $t3, $zero, 32
+addi $sp, $sp, -4
+sw $t2, 0($sp)
+addi $sp, $sp, -4
+sw $t3, 0($sp)
+jal DRAW_LOG_ROW_3
+
+lw $ra 0($sp)
+addi $sp, $sp, 4
+jr $ra
+
 MOVE_CARS:
 addi $sp, $sp, -4
 sw $ra, 0($sp)
@@ -563,6 +779,48 @@ sw $t1, 0($sp)
 jal SHIFT_ROW_ARRAY_R
 
 MOVE_CARS_ODD_TIME: 
+lw $ra 0($sp)
+addi $sp, $sp, 4
+jr $ra
+
+MOVE_LOGS:
+# we will move the frog along with the log if the frog is sitting on the log
+addi $sp, $sp, -4
+sw $ra, 0($sp)
+
+# only move if time is multiple of 10
+lw $t0, time
+addi $t4, $zero, 10
+div $t0, $t4
+mfhi $t4 # check if 0
+beq $t4, $zero, MOVE_LOGS_EVEN_TIME
+j MOVE_LOGS_ODD_TIME
+
+MOVE_LOGS_EVEN_TIME:
+
+# row 1
+la $t1, logRow1
+addi $sp, $sp, -4
+sw $t1, 0($sp)
+jal SHIFT_ROW_ARRAY_L
+# check frog y coincides with log y
+lw $t3, playerY
+addi $t4, $zero, 40
+
+
+# row 2
+la $t1, logRow2
+addi $sp, $sp, -4
+sw $t1, 0($sp)
+jal SHIFT_ROW_ARRAY_R
+
+# row 3
+la $t1, logRow3
+addi $sp, $sp, -4
+sw $t1, 0($sp)
+jal SHIFT_ROW_ARRAY_L
+
+MOVE_LOGS_ODD_TIME: 
 lw $ra 0($sp)
 addi $sp, $sp, 4
 jr $ra
@@ -656,8 +914,11 @@ add $t4, $t4, $t0 # $t4 is position to draw pixel
 
 # START COLLISION CHECK 
 lw $t1, 0($t4) # colour of pixel
-# Check if red
+# check if red
 li $t9, 0xff0000 # red
+beq $t1, $t9, OBSTACLE_COLLISION
+# check if blue
+li $t9, 0x0000ff # blue
 beq $t1, $t9, OBSTACLE_COLLISION
 # END COLLISION CHECK 
 j NO_OBSTACLE_COLLISION
@@ -699,6 +960,7 @@ GAME_LOOP:
 # drawing
 jal DRAW_MAP1_BACKGROUND
 jal DRAW_CARS
+jal DRAW_LOGS
 
 # obstacle collisions
 # idea: loop through pixels where player will be drawn before player is drawn
@@ -711,6 +973,7 @@ jal LISTEN_TO_KEYBOARD
 
 # obstacles
 jal MOVE_CARS
+jal MOVE_LOGS
 
 # update time
 lw $t0, time
