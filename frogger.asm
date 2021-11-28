@@ -32,12 +32,18 @@ map1EndHeight: .word 4
 carRow1: .word 0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000
 carRow2: .word 0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080
 carRow3: .word 0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000
+carRow1Rate: .word 1
+carRow2Rate: .word 2
+carRow3Rate: .word 1
 
 # Player information
 playerWidth: .word 4
 playerHeight: .word 4
 playerX: .word 0
 playerY: .word 60
+
+# Timing
+time: .word 0
 
 .text
 
@@ -524,16 +530,59 @@ lw $ra 0($sp)
 addi $sp, $sp, 4
 jr $ra
 
-################################# MAIN #################################
+MOVE_CARS:
+addi $sp, $sp, -4
+sw $ra, 0($sp)
 
-MAIN: 
+# row 1
 la $t1, carRow1
 addi $sp, $sp, -4
 sw $t1, 0($sp)
 jal SHIFT_ROW_ARRAY_R
+
+# row 2
+la $t1, carRow2
+addi $sp, $sp, -4
+sw $t1, 0($sp)
+jal SHIFT_ROW_ARRAY_L
+
+# row 3
+la $t1, carRow3
+addi $sp, $sp, -4
+sw $t1, 0($sp)
+jal SHIFT_ROW_ARRAY_R
+
+lw $ra 0($sp)
+addi $sp, $sp, 4
+jr $ra
+
+################################# MAIN #################################
+
+MAIN: 
+# game loop
+GAME_LOOP:
+
+# drawing
 jal DRAW_MAP1_BACKGROUND
 jal DRAW_PLAYER
 jal DRAW_CARS
+
+# movement
+jal MOVE_CARS
+
+# update time
+lw $t0, time
+addi $t0, $t0 1 # increment
+addi $t1, $zero, 20 # mod 20
+div $t0, $t1
+mfhi $t0
+sw $t0, time # update
+
+# sleep
+li $v0, 32
+li $a0, 50
+syscall
+j GAME_LOOP
 
 Exit:
 li $v0, 10 # terminate the program gracefully
