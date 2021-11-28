@@ -1,10 +1,33 @@
-.data
+#####################################################################
+#
+# CSC258H5S Fall 2021 Assembly Final Project
+# University of Toronto, St. George
+#
+# Student: Freeman Cheng, 1006877140
+#
 # Bitmap Display Configuration:
 # - Unit width in pixels: 8
 # - Unit height in pixels: 8
 # - Display width in pixels: 256
 # - Display height in pixels: 512
 # - Base Address for Display: 0x10008000 ($gp)
+#
+# Which milestone is reached in this submission?
+# (See the assignment handout for descriptions of the milestones)
+# - Milestone 3 (choose the one the applies)
+#
+# Which approved additional features have been implemented?
+# (See the assignment handout for the list of additional features)
+# 1. (fill in the feature, if any)
+# 2. (fill in the feature, if any)
+# 3. (fill in the feature, if any)
+# ... (add more if necessary)
+#
+# Any additional information that the TA needs to know:
+# - (write here, if any)
+#
+#####################################################################
+.data
 displayAddress: .word 0x10008000
 displayWidth: .word 32
 displayHeight: .word 64
@@ -806,19 +829,48 @@ jal SHIFT_ROW_ARRAY_L
 # check frog y coincides with log y
 lw $t3, playerY
 addi $t4, $zero, 40
+beq $t3, $t4, FROG_ON_CAR_ROW_1
+j FROG_NOT_ON_CAR_ROW_1
 
+FROG_ON_CAR_ROW_1:
+# move left
+jal KEY_A
+
+FROG_NOT_ON_CAR_ROW_1:
 
 # row 2
 la $t1, logRow2
 addi $sp, $sp, -4
 sw $t1, 0($sp)
 jal SHIFT_ROW_ARRAY_R
+# check frog y coincides with log y
+lw $t3, playerY
+addi $t4, $zero, 36
+beq $t3, $t4, FROG_ON_CAR_ROW_2
+j FROG_NOT_ON_CAR_ROW_2
+
+FROG_ON_CAR_ROW_2:
+# move right
+jal KEY_D
+
+FROG_NOT_ON_CAR_ROW_2:
 
 # row 3
 la $t1, logRow3
 addi $sp, $sp, -4
 sw $t1, 0($sp)
 jal SHIFT_ROW_ARRAY_L
+# check frog y coincides with log y
+lw $t3, playerY
+addi $t4, $zero, 32
+beq $t3, $t4, FROG_ON_CAR_ROW_3
+j FROG_NOT_ON_CAR_ROW_3
+
+FROG_ON_CAR_ROW_3:
+# move left
+jal KEY_A
+
+FROG_NOT_ON_CAR_ROW_3:
 
 MOVE_LOGS_ODD_TIME: 
 lw $ra 0($sp)
@@ -828,6 +880,9 @@ jr $ra
 # STACK (BOT -> TOP): 
 # RETURN STACK (BOT - > TOP):
 LISTEN_TO_KEYBOARD:
+addi $sp, $sp, -4
+sw $ra, 0($sp)
+
 # check if key has been pressed
 lw $t8, 0xffff0000
 beq $t8, 1, KEY_IN
@@ -837,51 +892,83 @@ KEY_IN:
 # if keystroke
 lw $t2, 0xffff0004
 # w
-beq $t2, 119, KEY_W
+beq $t2, 119, HANDLE_KEY_W
 # a
-beq $t2, 97, KEY_A
+beq $t2, 97, HANDLE_KEY_A
 # s
-beq $t2, 115, KEY_S
+beq $t2, 115, HANDLE_KEY_S
 # d
-beq $t2, 100, KEY_D
+beq $t2, 100, HANDLE_KEY_D
 j NO_KEY_IN
 
+HANDLE_KEY_W:
+jal KEY_W
+j NO_KEY_IN
+
+HANDLE_KEY_A:
+jal KEY_A
+j NO_KEY_IN
+
+HANDLE_KEY_S:
+jal KEY_S
+j NO_KEY_IN
+
+HANDLE_KEY_D:
+jal KEY_D
+j NO_KEY_IN
+
+NO_KEY_IN:
+lw $ra 0($sp)
+addi $sp, $sp, 4
+jr $ra
+
+# movement functions
+
+# STACK (BOT -> TOP): 
+# RETURN STACK (BOT - > TOP):
 KEY_W:
 lw $t3, playerY
 lw $t4, map1EndY
-beq $t3, $t4, NO_KEY_IN # collision detection
+beq $t3, $t4, NO_KEY_W # collision detection
 addi $t3, $t3, -1 # update position
 sw $t3, playerY
-j NO_KEY_IN
+NO_KEY_W:
+jr $ra
 
+# STACK (BOT -> TOP): 
+# RETURN STACK (BOT - > TOP):
 KEY_A:
 lw $t3, playerX
-beq $t3, $zero, NO_KEY_IN # collision detection
+beq $t3, $zero, NO_KEY_A # collision detection
 addi $t3, $t3, -1 # update position
 sw $t3, playerX
-j NO_KEY_IN
+NO_KEY_A:
+jr $ra
 
+# STACK (BOT -> TOP): 
+# RETURN STACK (BOT - > TOP):
 KEY_S:
 lw $t3, playerY
 lw $t4, displayHeight
 lw $t5, playerHeight
 sub $t4, $t4, $t5
-beq $t3, $t4, NO_KEY_IN # collision detection
+beq $t3, $t4, NO_KEY_S # collision detection
 addi $t3, $t3, 1 # update position
 sw $t3, playerY
-j NO_KEY_IN
+NO_KEY_S:
+jr $ra
 
+# STACK (BOT -> TOP): 
+# RETURN STACK (BOT - > TOP):
 KEY_D:
 lw $t3, playerX
 lw $t4, mapWidth
 lw $t5, playerWidth
 sub $t4, $t4, $t5
-beq $t3, $t4, NO_KEY_IN # collision detection
+beq $t3, $t4, NO_KEY_D # collision detection
 addi $t3, $t3, 1 # update position
 sw $t3, playerX
-j NO_KEY_IN
-
-NO_KEY_IN:
+NO_KEY_D:
 jr $ra
 
 # STACK (BOT -> TOP): 
@@ -951,6 +1038,26 @@ j CHECK_OBSTACLE_LOOP_Y
 CHECK_OBSTACLE_LOOP_Y_END:
 jr $ra
 
+# STACK (BOT -> TOP): 
+# RETURN STACK (BOT - > TOP):
+CHECK_VICTORY:
+# check if frog y is end y
+lw $t3, playerY
+addi $t4, $zero, 28
+beq $t3, $t4, IF_VICTORY
+j NO_VICTORY
+
+IF_VICTORY:
+# for now, reset player X and Y
+addi $t2, $zero, 0
+addi $t3, $zero, 60
+sw $t2, playerX
+sw $t3, playerY
+
+NO_VICTORY:
+jr $ra
+
+
 ################################# MAIN #################################
 
 MAIN: 
@@ -974,6 +1081,9 @@ jal LISTEN_TO_KEYBOARD
 # obstacles
 jal MOVE_CARS
 jal MOVE_LOGS
+
+# game
+jal CHECK_VICTORY
 
 # update time
 lw $t0, time
