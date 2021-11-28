@@ -534,6 +534,16 @@ MOVE_CARS:
 addi $sp, $sp, -4
 sw $ra, 0($sp)
 
+# only move if time is multiple of 10
+lw $t0, time
+addi $t4, $zero, 10
+div $t0, $t4
+mfhi $t4 # check if 0
+beq $t4, $zero, MOVE_CARS_EVEN_TIME
+j MOVE_CARS_ODD_TIME
+
+MOVE_CARS_EVEN_TIME:
+
 # row 1
 la $t1, carRow1
 addi $sp, $sp, -4
@@ -552,6 +562,7 @@ addi $sp, $sp, -4
 sw $t1, 0($sp)
 jal SHIFT_ROW_ARRAY_R
 
+MOVE_CARS_ODD_TIME: 
 lw $ra 0($sp)
 addi $sp, $sp, 4
 jr $ra
@@ -612,8 +623,71 @@ addi $t3, $t3, 1 # update position
 sw $t3, playerX
 j NO_KEY_IN
 
-
 NO_KEY_IN:
+jr $ra
+
+# STACK (BOT -> TOP): 
+# RETURN STACK (BOT - > TOP):
+CHECK_OBSTACLE_COLLISIONS:
+# idea: loop through pixels where player will be drawn before player is drawn
+# check if contain obstacle colors
+lw $t2, playerX
+lw $t3, playerY
+# loop limits
+lw $t5, playerWidth
+lw $t6, playerHeight
+add $t7, $t5, $zero # $t7 is copy of $t5
+# perform $t2 *= 4 and $t3 *= 128
+addi $t4, $zero, 4
+mult $t2, $t4
+mflo $t2 # $t2 = $t2 * 4
+
+addi $t4, $zero, 128
+mult $t3, $t4
+mflo $t3 # $t3 = $t3 * 128
+
+CHECK_OBSTACLE_LOOP_Y:
+beq $t6, $zero, CHECK_OBSTACLE_LOOP_Y_END
+
+CHECK_OBSTACLE_LOOP_X:
+beq $t5, $zero, CHECK_OBSTACLE_LOOP_X_END
+add $t4, $t2, $t3 # $t4 is total offset to add
+add $t4, $t4, $t0 # $t4 is position to draw pixel
+
+# START COLLISION CHECK 
+lw $t1, 0($t4) # colour of pixel
+# Check if red
+li $t9, 0xff0000 # red
+beq $t1, $t9, OBSTACLE_COLLISION
+# END COLLISION CHECK 
+j NO_OBSTACLE_COLLISION
+
+OBSTACLE_COLLISION:
+# for now, reset player positions
+addi $t2, $zero, 0
+addi $t3, $zero, 60
+sw $t2, playerX
+sw $t3, playerY
+j CHECK_OBSTACLE_LOOP_Y_END
+
+NO_OBSTACLE_COLLISION:
+
+addi $t2, $t2, 4 # move down a column
+addi $t5, $t5, -1 # loop counter decrement
+j CHECK_OBSTACLE_LOOP_X
+
+CHECK_OBSTACLE_LOOP_X_END:
+add $t5, $t7, $zero # reset $t5 to width
+addi $t4, $zero, -4
+mult $t4, $t5 
+mflo $t4
+add $t2, $t2, $t4 # reset $t4 to original x offset
+
+addi $t3, $t3, 128 # move down a row
+addi $t6, $t6, -1 # loop counter decrement
+j CHECK_OBSTACLE_LOOP_Y
+
+CHECK_OBSTACLE_LOOP_Y_END:
 jr $ra
 
 ################################# MAIN #################################
@@ -625,9 +699,14 @@ GAME_LOOP:
 # drawing
 jal DRAW_MAP1_BACKGROUND
 jal DRAW_CARS
-jal DRAW_PLAYER
+
+# obstacle collisions
+# idea: loop through pixels where player will be drawn before player is drawn
+# check if contain obstacle colors
+jal CHECK_OBSTACLE_COLLISIONS 
 
 # player
+jal DRAW_PLAYER
 jal LISTEN_TO_KEYBOARD
 
 # obstacles
