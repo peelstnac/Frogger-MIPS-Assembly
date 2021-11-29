@@ -51,6 +51,8 @@ map1LogsHeight: .word 12
 map1EndY: .word 28
 map1EndHeight: .word 4
 
+mapEndReached: .word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
 # Map obstacles
 carRow1: .word 0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000
 carRow2: .word 0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0xff0000,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080
@@ -64,11 +66,13 @@ logRow3: .word 0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x
 logRow1Rate: .word 1
 logRow2Rate: .word 2
 logRow3Rate: .word 1
+
 # Player information
 playerWidth: .word 4
 playerHeight: .word 4
 playerX: .word 0
 playerY: .word 60
+playerLives: .word 3
 
 # Timing
 time: .word 0
@@ -1011,6 +1015,11 @@ beq $t1, $t9, OBSTACLE_COLLISION
 j NO_OBSTACLE_COLLISION
 
 OBSTACLE_COLLISION:
+# player loses 1 life
+lw $t8, playerLives
+addi $t8, $t8, -1
+sw $t8, playerLives
+
 # for now, reset player positions
 addi $t2, $zero, 0
 addi $t3, $zero, 60
@@ -1048,6 +1057,16 @@ beq $t3, $t4, IF_VICTORY
 j NO_VICTORY
 
 IF_VICTORY:
+# mapEndReached[playerX] = 1
+lw $t2, playerX
+addi $t4, $zero, 4
+mult $t2, $t4 # need to scale playerX by 4
+mflo $t2 # $t2 = 4 * $t2
+la $t8, mapEndReached
+add $t8, $t8, $t2
+addi $t4, $zero, 1
+sw $t4, 0($t8)
+
 # for now, reset player X and Y
 addi $t2, $zero, 0
 addi $t3, $zero, 60
@@ -1057,6 +1076,109 @@ sw $t3, playerY
 NO_VICTORY:
 jr $ra
 
+# STACK (BOT -> TOP): 
+# RETURN STACK (BOT - > TOP):
+CHECK_NO_LIVES:
+lw $t8, playerLives
+beq $t8, $zero, Exit
+jr $ra
+
+# STACK (BOT -> TOP): 
+# RETURN STACK (BOT - > TOP):
+DRAW_END_REACHED_SQUARES:
+addi $sp, $sp, -4
+sw $ra, 0($sp)
+
+# read from mapEndReached and draw squares in places frog has made it to end
+# loop through mapEndReached
+la $t7, mapEndReached
+# loop init
+addi $t8, $zero, 0
+addi $t9, $zero, 128
+addi $t4, $zero, 1
+DRAW_END_REACHED_SQUARES_LOOP:
+beq $t8, $t9, DRAW_END_REACHED_SQUARES_LOOP_END
+# check if mapEndReached[$t8] = 1
+add $t6, $t7, $t8
+lw $t5, 0($t6)
+beq $t5, $t4, DERSL_IF
+j DERSL_ELSE 
+
+DERSL_IF:
+# draw 4x4 white square at ($t8, 0)
+# preserve registers
+addi $sp, $sp, -4
+sw $t0, 0($sp)
+addi $sp, $sp, -4
+sw $t1, 0($sp)
+addi $sp, $sp, -4
+sw $t2, 0($sp)
+addi $sp, $sp, -4
+sw $t3, 0($sp)
+addi $sp, $sp, -4
+sw $t4, 0($sp)
+addi $sp, $sp, -4
+sw $t5, 0($sp)
+addi $sp, $sp, -4
+sw $t6, 0($sp)
+addi $sp, $sp, -4
+sw $t7, 0($sp)
+addi $sp, $sp, -4
+sw $t8, 0($sp)
+addi $sp, $sp, -4
+sw $t9, 0($sp)
+# function args
+li $t1, 0xffffff # white
+addi $t2, $zero, 4
+addi $t3, $zero, 28
+# $t0 = $t8 / 4
+addi $t0, $zero, 4
+div $t8, $t0
+mflo $t0
+# push args
+addi $sp, $sp, -4
+sw $t1, 0($sp)
+addi $sp, $sp, -4
+sw $t0, 0($sp)
+addi $sp, $sp, -4
+sw $t3, 0($sp)
+addi $sp, $sp, -4
+sw $t2, 0($sp)
+addi $sp, $sp, -4
+sw $t2, 0($sp)
+
+jal DRAW_RECTANGLE
+
+# restore registers
+lw $t9, 0($sp)
+addi $sp, $sp, 4
+lw $t8, 0($sp)
+addi $sp, $sp, 4
+lw $t7, 0($sp)
+addi $sp, $sp, 4
+lw $t6, 0($sp)
+addi $sp, $sp, 4
+lw $t5, 0($sp)
+addi $sp, $sp, 4
+lw $t4, 0($sp)
+addi $sp, $sp, 4
+lw $t3, 0($sp)
+addi $sp, $sp, 4
+lw $t2, 0($sp)
+addi $sp, $sp, 4
+lw $t1, 0($sp)
+addi $sp, $sp, 4
+lw $t0, 0($sp)
+addi $sp, $sp, 4
+
+DERSL_ELSE:
+addi $t8, $t8, 4
+j DRAW_END_REACHED_SQUARES_LOOP
+
+DRAW_END_REACHED_SQUARES_LOOP_END:
+lw $ra, 0($sp)
+addi $sp, $sp, 4
+jr $ra
 
 ################################# MAIN #################################
 
@@ -1068,6 +1190,7 @@ GAME_LOOP:
 jal DRAW_MAP1_BACKGROUND
 jal DRAW_CARS
 jal DRAW_LOGS
+jal DRAW_END_REACHED_SQUARES
 
 # obstacle collisions
 # idea: loop through pixels where player will be drawn before player is drawn
@@ -1084,6 +1207,7 @@ jal MOVE_LOGS
 
 # game
 jal CHECK_VICTORY
+jal CHECK_NO_LIVES
 
 # update time
 lw $t0, time
@@ -1095,7 +1219,7 @@ sw $t0, time # update
 
 # sleep
 li $v0, 32
-li $a0, 50
+li $a0, 20
 syscall
 j GAME_LOOP
 
