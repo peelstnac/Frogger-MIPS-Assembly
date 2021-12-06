@@ -14,14 +14,15 @@
 #
 # Which milestone is reached in this submission?
 # (See the assignment handout for descriptions of the milestones)
-# - Milestone 3 (choose the one the applies)
+# - Milestone 5 (choose the one the applies)
 #
 # Which approved additional features have been implemented?
 # (See the assignment handout for the list of additional features)
-# 1. (fill in the feature, if any)
-# 2. (fill in the feature, if any)
-# 3. (fill in the feature, if any)
-# ... (add more if necessary)
+# 1. Display the number of lives remaining (EASY)
+# 2. Have objects in different rows move at different speeds (EASY)
+# 3. Add a third row in each of the water and road sections (EASY)
+# 4. Add sound effects for movement, collisions, game end and reaching the goal area (HARD)
+# 5. Add powerups to scene (slowing down time, score booster, extra lives, etc) (HARD)
 #
 # Any additional information that the TA needs to know:
 # - (write here, if any)
@@ -60,7 +61,7 @@ carRow3: .word 0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x808080,0x
 carRow1Rate: .word 1
 carRow2Rate: .word 2
 carRow3Rate: .word 1
-logRow1: .word 0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff
+logRow1: .word 0x964b00,0x964b00,0xffd700,0xffd700,0xffd700,0xffd700,0x964b00,0x964b00,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff
 logRow2: .word 0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00
 logRow3: .word 0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x964b00,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff,0x0000ff
 logRow1Rate: .word 1
@@ -73,9 +74,14 @@ playerHeight: .word 4
 playerX: .word 0
 playerY: .word 60
 playerLives: .word 3
+playerScore: .word 0
 
 # Timing
 time: .word 0
+sleep: .word 50
+
+livesString: .asciiz "Lives remaining: "
+newline: .asciiz "\n"
 
 .text
 
@@ -783,7 +789,12 @@ addi $t4, $zero, 10
 div $t0, $t4
 mfhi $t4 # check if 0
 beq $t4, $zero, MOVE_CARS_EVEN_TIME
-j MOVE_CARS_ODD_TIME
+# check multiple of 12
+addi $t4, $zero, 12
+div $t0, $t4
+mfhi $t4 # check if 0
+beq $t4, $zero, MOVE_CARS_ODD_TIME
+j MOVE_CARS_END
 
 MOVE_CARS_EVEN_TIME:
 
@@ -792,12 +803,10 @@ la $t1, carRow1
 addi $sp, $sp, -4
 sw $t1, 0($sp)
 jal SHIFT_ROW_ARRAY_R
-
-# row 2
-la $t1, carRow2
+la $t1, carRow1
 addi $sp, $sp, -4
 sw $t1, 0($sp)
-jal SHIFT_ROW_ARRAY_L
+jal SHIFT_ROW_ARRAY_R
 
 # row 3
 la $t1, carRow3
@@ -805,7 +814,16 @@ addi $sp, $sp, -4
 sw $t1, 0($sp)
 jal SHIFT_ROW_ARRAY_R
 
+j MOVE_CARS_END
+
 MOVE_CARS_ODD_TIME: 
+# row 2
+la $t1, carRow2
+addi $sp, $sp, -4
+sw $t1, 0($sp)
+jal SHIFT_ROW_ARRAY_L
+
+MOVE_CARS_END:
 lw $ra 0($sp)
 addi $sp, $sp, 4
 jr $ra
@@ -819,12 +837,21 @@ sw $ra, 0($sp)
 lw $t0, time
 addi $t4, $zero, 10
 div $t0, $t4
-mfhi $t4 # check if 0
+mfhi $t4 # check if 10
 beq $t4, $zero, MOVE_LOGS_EVEN_TIME
-j MOVE_LOGS_ODD_TIME
+addi $t4, $zero, 12
+div $t0, $t4
+mfhi $t4 # check if 12
+beq $t4, $zero, MOVE_LOGS_ODD_TIME
+j MOVE_LOGS_END
 
 MOVE_LOGS_EVEN_TIME:
 
+# row 1
+la $t1, logRow1
+addi $sp, $sp, -4
+sw $t1, 0($sp)
+jal SHIFT_ROW_ARRAY_L
 # row 1
 la $t1, logRow1
 addi $sp, $sp, -4
@@ -839,25 +866,9 @@ j FROG_NOT_ON_CAR_ROW_1
 FROG_ON_CAR_ROW_1:
 # move left
 jal KEY_A
+jal KEY_A
 
 FROG_NOT_ON_CAR_ROW_1:
-
-# row 2
-la $t1, logRow2
-addi $sp, $sp, -4
-sw $t1, 0($sp)
-jal SHIFT_ROW_ARRAY_R
-# check frog y coincides with log y
-lw $t3, playerY
-addi $t4, $zero, 36
-beq $t3, $t4, FROG_ON_CAR_ROW_2
-j FROG_NOT_ON_CAR_ROW_2
-
-FROG_ON_CAR_ROW_2:
-# move right
-jal KEY_D
-
-FROG_NOT_ON_CAR_ROW_2:
 
 # row 3
 la $t1, logRow3
@@ -875,8 +886,27 @@ FROG_ON_CAR_ROW_3:
 jal KEY_A
 
 FROG_NOT_ON_CAR_ROW_3:
+j MOVE_LOGS_END
 
 MOVE_LOGS_ODD_TIME: 
+# row 2
+la $t1, logRow2
+addi $sp, $sp, -4
+sw $t1, 0($sp)
+jal SHIFT_ROW_ARRAY_R
+# check frog y coincides with log y
+lw $t3, playerY
+addi $t4, $zero, 36
+beq $t3, $t4, FROG_ON_CAR_ROW_2
+j FROG_NOT_ON_CAR_ROW_2
+
+FROG_ON_CAR_ROW_2:
+# move right
+jal KEY_D
+
+FROG_NOT_ON_CAR_ROW_2:
+
+MOVE_LOGS_END:
 lw $ra 0($sp)
 addi $sp, $sp, 4
 jr $ra
@@ -907,19 +937,28 @@ j NO_KEY_IN
 
 HANDLE_KEY_W:
 jal KEY_W
-j NO_KEY_IN
+j PLAY_MOVEMENT_SOUND
 
 HANDLE_KEY_A:
 jal KEY_A
-j NO_KEY_IN
+j PLAY_MOVEMENT_SOUND
 
 HANDLE_KEY_S:
 jal KEY_S
-j NO_KEY_IN
+j PLAY_MOVEMENT_SOUND
 
 HANDLE_KEY_D:
 jal KEY_D
-j NO_KEY_IN
+j PLAY_MOVEMENT_SOUND
+
+PLAY_MOVEMENT_SOUND:
+# syscall args
+addi $v0, $zero, 31
+addi $a0, $zero, 61
+addi $a1, $zero, 100
+addi $a2, $zero, 88
+addi $a3, $zero, 64
+syscall
 
 NO_KEY_IN:
 lw $ra 0($sp)
@@ -978,6 +1017,8 @@ jr $ra
 # STACK (BOT -> TOP): 
 # RETURN STACK (BOT - > TOP):
 CHECK_OBSTACLE_COLLISIONS:
+addi $sp, $sp, -4
+sw $ra, 0($sp)
 # idea: loop through pixels where player will be drawn before player is drawn
 # check if contain obstacle colors
 lw $t2, playerX
@@ -1012,9 +1053,31 @@ beq $t1, $t9, OBSTACLE_COLLISION
 li $t9, 0x0000ff # blue
 beq $t1, $t9, OBSTACLE_COLLISION
 # END COLLISION CHECK 
+
+# START POWERUP COLLISION CHECK 
+li $t9, 0xffd700 # gold
+beq $t1, $t9, POWERUP_COLLISION
+j NO_POWERUP_COLLISION
+
+POWERUP_COLLISION:
+li $t9, 200
+sw $t9, sleep
+j NO_OBSTACLE_COLLISION
+
+NO_POWERUP_COLLISION:
+li $t9, 50
+sw $t9, sleep
 j NO_OBSTACLE_COLLISION
 
 OBSTACLE_COLLISION:
+# play collision sound
+addi $v0, $zero, 31
+addi $a0, $zero, 40
+addi $a1, $zero, 100
+addi $a2, $zero, 88
+addi $a3, $zero, 64
+syscall
+
 # player loses 1 life
 lw $t8, playerLives
 addi $t8, $t8, -1
@@ -1025,6 +1088,9 @@ addi $t2, $zero, 0
 addi $t3, $zero, 60
 sw $t2, playerX
 sw $t3, playerY
+
+# print lives
+jal PRINT_LIVES
 j CHECK_OBSTACLE_LOOP_Y_END
 
 NO_OBSTACLE_COLLISION:
@@ -1045,6 +1111,8 @@ addi $t6, $t6, -1 # loop counter decrement
 j CHECK_OBSTACLE_LOOP_Y
 
 CHECK_OBSTACLE_LOOP_Y_END:
+lw $ra, 0($sp)
+addi $sp, $sp, 4
 jr $ra
 
 # STACK (BOT -> TOP): 
@@ -1057,6 +1125,17 @@ beq $t3, $t4, IF_VICTORY
 j NO_VICTORY
 
 IF_VICTORY:
+# update score
+lw $a0, playerScore
+addi $a0, $a0, 1
+sw $a0, playerScore
+# play victory sound
+addi $v0, $zero, 31
+addi $a0, $zero, 72
+addi $a1, $zero, 100
+addi $a2, $zero, 0
+addi $a3, $zero, 64
+syscall
 # mapEndReached[playerX] = 1
 lw $t2, playerX
 addi $t4, $zero, 4
@@ -1180,9 +1259,25 @@ lw $ra, 0($sp)
 addi $sp, $sp, 4
 jr $ra
 
+# STACK (BOT -> TOP): 
+# RETURN STACK (BOT - > TOP):
+PRINT_LIVES:
+addi $v0, $zero, 4
+la $a0, livesString
+syscall
+addi $v0, $zero, 1
+lw $a0, playerLives
+syscall
+addi $v0, $zero, 4
+la $a0, newline
+syscall
+jr $ra
+
 ################################# MAIN #################################
 
 MAIN: 
+jal PRINT_LIVES
+
 # game loop
 GAME_LOOP:
 
@@ -1212,17 +1307,46 @@ jal CHECK_NO_LIVES
 # update time
 lw $t0, time
 addi $t0, $t0 1 # increment
-addi $t1, $zero, 20 # mod 20
+addi $t1, $zero, 60 # mod 60
 div $t0, $t1
 mfhi $t0
 sw $t0, time # update
 
 # sleep
 li $v0, 32
-li $a0, 20
+lw $a0, sleep
 syscall
 j GAME_LOOP
 
 Exit:
+# sleep
+li $v0, 32
+li $a0, 1000
+syscall
+# play exit sound
+# megalovania
+addi $v0, $zero, 33
+addi $a0, $zero, 62
+addi $a1, $zero, 300
+addi $a2, $zero, 0
+addi $a3, $zero, 64
+syscall
+syscall
+addi $a0, $zero, 74
+syscall
+addi $a0, $zero, 69
+syscall
+addi $a0, $zero, 68
+syscall
+addi $a0, $zero, 67
+syscall
+addi $a0, $zero, 65
+syscall
+addi $a0, $zero, 62
+syscall
+addi $a0, $zero, 65
+syscall
+addi $a0, $zero, 67
+syscall
 li $v0, 10 # terminate the program gracefully
 syscall
